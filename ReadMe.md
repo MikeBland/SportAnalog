@@ -15,6 +15,8 @@ Analog inputs labelled A3 and A4 may also be used, they will only be sent over t
 The "Scaling" option link operates on the A2 value. If left unconnected, A2 operates normally. If the option is connected to ground, the analog value is scaled.
 The X8R2Analog device used a resistor divider of 15K and 3.3K. This is suitable for up to 4S Lipo. If you want to measure only a 3S Lipo, and use this same resistor divider, then grounding the link option causes the measured value to be scaled as though the divider was 10K and 3.3K.
 
+The physical ID default value is 0x1B, as on the X8R2Analog, but with this version you may change it using the ChangeId app accessed from the ersky9x bootloader or the ChangeID option in "Maintenance Mode" of ersky9x.
+
 Connections:
 
 <img src="Docs/Wiring.jpg"/>
