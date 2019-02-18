@@ -16,6 +16,7 @@ The "Scaling" option link operates on the A2 value. If left unconnected, A2 oper
 The X8R2Analog device used a resistor divider of 15K and 3.3K. This is suitable for up to 4S Lipo. If you want to measure only a 3S Lipo, and use this same resistor divider, then grounding the link option causes the measured value to be scaled as though the divider was 10K and 3.3K.
 
 Connections:
+
 <img src="Docs/Wiring.jpg"/>
 
 ## License and Disclaimer
