@@ -21,6 +21,10 @@ Connections:
 
 <img src="Docs/Wiring.jpg"/>
 
+Voltage divider:
+
+<img src="Docs/Vsense1.png"/>
+
 ## License and Disclaimer
 This software is provided under the GNU v2.0 License. All relevant restrictions apply including the following. In case there is a conflict, the GNU v2.0 License is overriding.
 This software is provided as-is in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. In no event will the authors and/or contributors be held liable for any damages arising from the use of this software.
