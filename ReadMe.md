@@ -24,6 +24,8 @@ Connections:
 Voltage divider:
 
 <img src="Docs/Vsense1.png"/>
+This is a suggested method for connecting a voltage divider. With 10K and 3K3 resistors, this is suitable for voltages up to 13.3 volts. For higher voltages, increase the value of the 10K resistor.
+The 1K resistor in the ground connection avoids ground loops.
 
 ## License and Disclaimer
 This software is provided under the GNU v2.0 License. All relevant restrictions apply including the following. In case there is a conflict, the GNU v2.0 License is overriding.
