@@ -118,6 +118,9 @@ uint8_t Timer12ms ;
 uint8_t SendStart ;
 uint8_t Idle ;
 
+uint8_t ReceivedAppId[2] ;
+
+uint8_t Send32packet ;
 uint8_t ReceivedPacket[8] ;
 
 uint16_t MillisPrecount ;
@@ -147,6 +150,9 @@ void init()
 
 	ID_DDR &= ~ID_BIT ;		// Input
 	ID_PORT |= ID_BIT ;		// pullup
+
+	LINK_DDR &= ~LINK_BIT ;	//Input
+	LINK_PORT |= LINK_BIT ;	// pullup
 
 	A3_DDR &= ~A3_BIT ;		// Input
 	A3_PORT |= A3_BIT ;		// pullup
@@ -677,12 +683,29 @@ void loop()
 					{
   			  	sendData() ;
 					}
+						else if ( Send32packet )
+						{
+							TCCR0B = 1 ;		// Clock div 1
+							setTX() ;
+  						Crc = 0 ;
+  						sendByte(0x32); // DATA_FRAME (0x10) or 0
+  						sendByte( ReceivedAppId[0] ) ;
+  						sendByte( ReceivedAppId[1] ) ;
+  						sendByte(1);
+  						sendByte(SensorId & 0x1F);
+  						sendByte(0);
+  						sendByte(0);
+  						sendCrc();
+							setRX() ;
+							Send32packet = 0 ;
+						}
   			  readSensors() ;
 				}
 				else
 				{
-					if ( (rx & 0x1F) == SENSOR_CONFIG_ID)
-					{
+					lastRx = 0 ;
+//					if ( (rx & 0x1F) == SENSOR_CONFIG_ID)
+//					{
 						// receive complete packet
 						if ( getPacket() != -1 )
 						{
@@ -708,11 +731,11 @@ void loop()
 										}
 									}
 								}
-								else if ( ReceivedPacket[0] == 0x31 )
+								else if ( ReceivedPacket[2] == 0xF1 )
 								{
-									if ( ReceivedPacket[2] == 0xF1 )
+									if ( ( ReceivedPacket[1] == 0x02 ) || ( ReceivedPacket[1] == 0x03 ) )
 									{
-										if ( ( ReceivedPacket[1] == 0x02 ) || ( ReceivedPacket[1] == 0x03 ) )
+										if ( ReceivedPacket[0] == 0x31 )
 										{
 											if ( ReceivedPacket[3] == 0x01 )
 											{
@@ -732,15 +755,25 @@ void loop()
 												}
 											}
 										}
+										else if ( ReceivedPacket[0] == 0x30 )
+										{
+											if ( ReceivedPacket[3] == 0x01 )
+											{
+												ReceivedAppId[0] = ReceivedPacket[1] ;
+												ReceivedAppId[1] = ReceivedPacket[2] ;
+												// Request to read current value
+												Send32packet = 1 ;
+											}
+										}
 									}
 								}
 							}
 						}
 					}
-					else
-					{
-						lastRx = rx ;
-					}
+//					else
+//					{
+//						lastRx = rx ;
+//					}
 				}
 			}
 			else
