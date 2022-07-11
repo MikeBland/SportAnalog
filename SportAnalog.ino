@@ -93,14 +93,14 @@
 
 #define FORCE_INDIRECT(ptr) __asm__ __volatile__ ("" : "=e" (ptr) : "0" (ptr))
 
-typedef uint8_t   prog_uint8_t  __attribute__((__progmem__));//,deprecated("prog_uint8_t type is deprecated.")));
+//typedef uint8_t   prog_uint8_t  __attribute__((__progmem__));//,deprecated("prog_uint8_t type is deprecated.")));
 #define APM __attribute__(( section(".progmem.data") ))
 
-const prog_uint8_t APM Indices[] = {	0x00, 0xA1, 0x22, 0x83, 0xE4, 0x45,
-																			0xC6, 0x67, 0x48, 0xE9, 0x6A, 0xCB,
-                                      0xAC, 0x0D, 0x8E, 0x2F, 0xD0, 0x71,
-                                      0xF2, 0x53, 0x34, 0x95, 0x16, 0xB7,
-																			0x98, 0x39, 0xBA, 0x1B } ;
+const uint8_t APM Indices[] = {	0x00, 0xA1, 0x22, 0x83, 0xE4, 0x45,
+																0xC6, 0x67, 0x48, 0xE9, 0x6A, 0xCB,
+                                0xAC, 0x0D, 0x8E, 0x2F, 0xD0, 0x71,
+                                0xF2, 0x53, 0x34, 0x95, 0x16, 0xB7,
+																0x98, 0x39, 0xBA, 0x1B } ;
 
 
 
@@ -160,6 +160,11 @@ void init()
 	A4_DDR &= ~A4_BIT ;		// Input
 	A4_PORT |= A4_BIT ;		// pullup
 
+#if SPORT_BIT == 0x80
+		ADCSRB &= ~(1<<ACME) ;
+		ACSR = (1<<ACBG) | (1 << ACIS1) ;
+		DIDR1 |= (1<<AIN1D) ;
+#endif
 
 #if DEBUG
 	DEBUG_DDR |= DEBUG_BIT | DEBUGA_BIT ;
@@ -175,7 +180,11 @@ void setup()
 
 static uint8_t rx_pin_read()
 {
+#if SPORT_BIT == 0x80
+	return ACSR & ( 1 << ACO ) ;
+#else	
 	return SPORT_PIN & SPORT_BIT ;
+#endif
 }
 
 inline void setTX()
@@ -476,7 +485,11 @@ static uint8_t recv()
 #if DEBUG
 	DEBUG_PORT &= ~DEBUG_BIT ;
 #endif
+#if SPORT_BIT == 0x80
+	    if (rx_pin_read())
+#else
 	    if (!rx_pin_read())
+#endif
 			{
     	  d |= 0x80 ;
 			}
@@ -503,13 +516,23 @@ void wait4msIdle()
 	TCNT0 = 0 ;
 	TCCR0B = 4 ;		// Clock div 256, 32 uS per count
 	// 125 counts is 4mS
+#if SPORT_BIT == 0x80
+	ACSR |= ( 1<<ACI ) ;    // clear pending interrupt
+#else
 	EIFR = (1 << INTF0) ;		// CLEAR flag
+#endif
 	do
 	{
+#if SPORT_BIT == 0x80
+		if ( ( ACSR & (1 << ACI) ) || ( ( ACSR & ACO ) == 0 ) )
+		{
+			ACSR |= ( 1<<ACI ) ;    // clear pending interrupt
+#else
 		if ( ( EIFR & (1 << INTF0) ) || ( SPORT_PIN & SPORT_BIT) )
 		{
 			EIFR = (1 << INTF0) ;
-			TCNT0 = 0 ;			
+#endif
+			TCNT0 = 0 ;			 
 		}
 //		wdt_reset() ;
 	} while ( TCNT0 < 126 ) ;
@@ -519,6 +542,9 @@ void wait4msIdle()
 
 uint8_t getBaudrate()
 {
+#if SPORT_BIT == 0x80
+	return 100 ;		// dummy value not used
+#else
 	uint8_t rx ;
 	TCCR0B = 2 ;		// Clock div 8, 1 uS per count
 	EIFR = (1 << INTF0) ;		// CLEAR flag
@@ -527,7 +553,7 @@ uint8_t getBaudrate()
 		if ( EIFR & (1 << INTF0) )
 		{
 			rx = TCNT0 ;		// Note timer value
-			EIFR = (1 << INTF0) ;
+			EIFR = (1 << INTF0) ;		// CLEAR flag
 			break ;
 		}
 //		wdt_reset() ;
@@ -557,6 +583,7 @@ uint8_t getBaudrate()
 	}
 	// rx now the time (in 1uS units) of the 8 bits
 	return rx ;
+#endif
 }
 
 
@@ -644,19 +671,31 @@ void loop()
 	getBaudrate() ;		// Skip second frame as well
 	wait4msIdle() ;
 	
+#if SPORT_BIT == 0x80
+	ACSR |= ( 1<<ACI ) ;    // clear pending interrupt
+#else
 	EICRA = 3 ;
-	EIFR = (1 << INTF0) ;
+	EIFR = (1 << INTF0) ;		// CLEAR flag
+#endif
 	
 	for(;;)
 	{
+#if SPORT_BIT == 0x80
+		if ( ACSR & (1 << ACI) )
+#else
 		if ( EIFR & (1 << INTF0) )
+#endif
 		{
 //			TCCR0B = 0 ;		// stop timer
 //			TCNT0 = 0 ;
 //			TCCR0B = 1 ;		// Clock div 1
 			OCR1A = TCNT1 + RXCENTRE ;
 			TIFR1 = (1 << OCF1A) ; 		// Clear flag
-			EIFR = (1 << INTF0) ;		// Clear flag
+#if SPORT_BIT == 0x80
+			ACSR |= ( 1<<ACI ) ;    // clear pending interrupt
+#else
+			EIFR = (1 << INTF0) ;		// CLEAR flag
+#endif
 #if DEBUG
 			DEBUG_PORT |= DEBUGA_BIT ;
 #endif
@@ -768,7 +807,7 @@ void loop()
 									}
 								}
 							}
-						}
+//						}
 					}
 //					else
 //					{
@@ -780,7 +819,11 @@ void loop()
 			{
 				lastRx = rx ;
 			}
-			EIFR = (1 << INTF0) ;
+#if SPORT_BIT == 0x80
+			ACSR |= ( 1<<ACI ) ;    // clear pending interrupt
+#else
+			EIFR = (1 << INTF0) ;		// CLEAR flag
+#endif
 		}
 	}
 }
@@ -921,4 +964,3 @@ static uint8_t eeprom_read( uint8_t address )
 /* Return data from data register */
 	return EEDR ;
 }
-
